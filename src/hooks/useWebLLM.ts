@@ -104,6 +104,7 @@ export function useWebLLM() {
       setGpuInfo(info);
       if (!info.supported) {
         setStatus('fallback');
+        setIsSimulationMode(true);
         setErrorMessage(info.reason || 'WebGPU is not supported on this device/browser.');
       }
     });

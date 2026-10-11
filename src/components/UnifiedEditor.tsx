@@ -583,23 +583,15 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
       {/* AI Assistant Section (Action Toolbar & Status) */}
       <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 p-2.5 sm:p-4 transition-all space-y-2 sm:space-y-3">
         
-        {/* WebGPU Fallback Demo Notice if not supported */}
-        {status === 'fallback' && !isSimulationMode && (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        {/* WebGPU Fallback / Demo Mode Notice */}
+        {status === 'fallback' && (
+          <div className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 text-xs">
             <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
               <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>WebGPU acceleration is offline on this browser. You can test all 5 writing actions with instant simulation mode.</span>
+              <span>
+                <strong>Instant Demo Mode active:</strong> WebGPU is offline on this browser (WebGPU requires HTTPS and Chrome 113+, Edge, or Safari 18+ with hardware acceleration). All 5 writing actions work instantly.
+              </span>
             </div>
-            {onToggleSimulationMode && (
-              <button
-                type="button"
-                onClick={onToggleSimulationMode}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-xs transition-colors shrink-0"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Enable Demo Mode</span>
-              </button>
-            )}
           </div>
         )}
 
