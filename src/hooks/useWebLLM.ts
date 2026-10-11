@@ -283,14 +283,19 @@ export function useWebLLM() {
         transformed = text
           .trim()
           .replace(/\s+/g, ' ')
+          .replace(/\bi\b/g, 'I')
           .replace(/([.!?])\s*([a-z])/g, (_, p1, p2) => `${p1} ${p2.toUpperCase()}`);
-        if (!transformed.endsWith('.')) transformed += '.';
+        if (transformed.length > 0) {
+          transformed = transformed.charAt(0).toUpperCase() + transformed.slice(1);
+        }
+        if (!/[.!?]$/.test(transformed)) {
+          transformed += '.';
+        }
         break;
     }
 
-    if (transformed === text) {
-      transformed = `[Polished] ${text}`;
-    }
+    // Ensure output is clean text without any bracketed tags or metadata
+    transformed = transformed.replace(/^\[(Polished|Revised|Improved|Cleaned)\]\s*/i, '');
 
     const words = transformed.split(' ');
     let currentResult = '';
@@ -391,6 +396,17 @@ export function useWebLLM() {
       if (cleaned.startsWith('```') && cleaned.endsWith('```')) {
         cleaned = cleaned.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
       }
+      // Strip any unwanted bracketed tags or conversational preamble
+      cleaned = cleaned
+        .replace(/^\[(Polished|Revised|Improved|Cleaned)\]\s*/i, '')
+        .replace(/^(Here is|Here's) (the|your)? (improved|revised|rewritten|polished)? (text|version|draft):\s*/i, '')
+        .trim();
+
+      // Unwrap quotes if the LLM wrapped the entire response in quotation marks
+      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith('“') && cleaned.endsWith('”'))) {
+        cleaned = cleaned.slice(1, -1).trim();
+      }
+
       setResultText(cleaned);
       if (onUpdate) {
         onUpdate(cleaned);
