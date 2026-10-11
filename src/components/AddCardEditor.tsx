@@ -256,7 +256,7 @@ export const AddCardEditor: React.FC<AddCardEditorProps> = ({
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
                   <span>
                     {status === 'downloading'
-                      ? `Downloading ${currentModel.name} (~${currentModel.sizeMB} MB)`
+                      ? `Downloading ${currentModel.name}`
                       : 'Allocating GPU memory buffers'}
                   </span>
                 </div>

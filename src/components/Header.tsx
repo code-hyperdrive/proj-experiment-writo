@@ -160,10 +160,10 @@ export const Header: React.FC<HeaderProps> = ({
                   {AVAILABLE_MODELS.map((m) => {
                     const isCached = cachedModelIds.includes(m.id);
                     const isDownloading = downloadingModelId === m.id;
-                    const tag = isDownloading ? '⏳ Downloading...' : isCached ? '✓ Downloaded' : 'Not downloaded';
+                    const symbol = isDownloading ? '⏳' : isCached ? '✓' : '○';
                     return (
                       <option key={m.id} value={m.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium">
-                        {isCached ? '✓ [Downloaded] ' : ''}{m.name} ({m.family} • {m.sizeMB}MB) — {tag} {m.recommended ? '★' : ''}
+                        {symbol} {m.name} ({m.family}){m.recommended ? ' ★' : ''}
                       </option>
                     );
                   })}
@@ -173,18 +173,18 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Status pill for the currently selected model */}
               {cachedModelIds.includes(modelId) ? (
-                <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center gap-1" title="Model weights are downloaded and ready on your device">
+                <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center gap-1" title="Model weights are ready on your device">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Downloaded
+                  ✓ Ready
                 </span>
               ) : downloadingModelId === modelId ? (
                 <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-                  Downloading
+                  ⏳ Loading
                 </span>
               ) : (
-                <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-200/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-600/40" title="Model weights will download on first use">
-                  Not downloaded
+                <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-200/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-600/40" title="Model weights will load on first use">
+                  ○ On Demand
                 </span>
               )}
             </div>

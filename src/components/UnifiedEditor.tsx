@@ -734,7 +734,7 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
                     : `Loading ${currentModel.name} from Offline Disk Cache`}
                 </span>
                 <span className="text-slate-500 dark:text-slate-400">
-                  ({currentModel.family} • ~{currentModel.sizeMB} MB)
+                  ({currentModel.family})
                 </span>
               </div>
               <span className="font-mono font-bold text-brand-600 dark:text-brand-400">

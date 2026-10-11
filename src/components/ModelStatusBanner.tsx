@@ -157,7 +157,7 @@ export const ModelStatusBanner: React.FC<ModelStatusBannerProps> = ({
                 {status === 'downloading' ? 'Downloading Model Weights' : 'Initializing Shader Pipeline & Memory'}
               </span>
               <span className="text-slate-500 dark:text-slate-400">
-                ({model.name} • ~{model.sizeMB} MB)
+                ({model.name})
               </span>
             </div>
             <span className="font-mono font-bold text-brand-600 dark:text-brand-400">
@@ -200,7 +200,7 @@ export const ModelStatusBanner: React.FC<ModelStatusBannerProps> = ({
         </div>
         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px]">
           <span className="bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded font-mono">
-            {model.vramMB} MB VRAM
+            Local WebGPU
           </span>
           <span>•</span>
           <span>Offline Ready</span>
@@ -222,7 +222,7 @@ export const ModelStatusBanner: React.FC<ModelStatusBannerProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                {model.name} (~{model.sizeMB} MB)
+                {model.name}
               </h2>
               {model.recommended && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300">
