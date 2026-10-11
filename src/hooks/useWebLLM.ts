@@ -7,7 +7,15 @@ import { checkWebGPUSupport, WebGPUCheckResult } from '../utils/webgpu';
 import { detectNetworkSpeed } from '../utils/networkSpeed';
 
 export function useWebLLM() {
-  const [modelId, setModelId] = useState<string>(DEFAULT_MODEL_ID);
+  const [modelId, setModelId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('writo_selected_model');
+      if (saved && AVAILABLE_MODELS.some((m) => m.id === saved)) {
+        return saved;
+      }
+    } catch {}
+    return DEFAULT_MODEL_ID;
+  });
   const [status, setStatus] = useState<EngineStatus>('unloaded');
   const [progress, setProgress] = useState<LoadingProgress>({ progress: 0, text: '' });
   const [gpuInfo, setGpuInfo] = useState<WebGPUCheckResult | null>(null);
@@ -36,7 +44,9 @@ export function useWebLLM() {
   const [activeLoadedModelId, setActiveLoadedModelId] = useState<string | null>(null);
 
   // Track if user has manually chosen a model to avoid overriding their preference
-  const userManuallySelectedModelRef = useRef<boolean>(false);
+  const userManuallySelectedModelRef = useRef<boolean>(
+    typeof window !== 'undefined' && localStorage.getItem('writo_user_manually_selected') === 'true'
+  );
 
   // Engine references to keep loaded in memory
   const engineRef = useRef<MLCEngine | null>(null);
@@ -63,10 +73,26 @@ export function useWebLLM() {
       }
     }
     setCachedModelIds(cached);
+
+    // If current model is not cached, but user already has an offline cached model and hasn't manually set preference, pick the cached one!
+    try {
+      const savedChoice = localStorage.getItem('writo_selected_model');
+      if (!savedChoice && cached.length > 0 && !cached.includes(modelId)) {
+        setModelId(cached[0]);
+      }
+    } catch {}
+
     return cached;
+  }, [modelId]);
+
+  // Request browser storage persistence so model weights are never evicted
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
   }, []);
 
-  // Detect Network Speed and auto-select optimal model
+  // Detect Network Speed (advisory only - never overrides existing cached or selected models)
   const runSpeedCheck = useCallback(async () => {
     setNetworkInfo((prev) => ({ ...prev, isTesting: true }));
     try {
@@ -81,8 +107,10 @@ export function useWebLLM() {
         isTesting: false,
       });
 
-      // Only auto-switch model if user hasn't manually overridden it yet and engine is not already loaded
-      if (!userManuallySelectedModelRef.current && status === 'unloaded') {
+      // ONLY auto-switch model on very first visit if user has never selected a model and has no cached models
+      const hasSavedChoice = typeof window !== 'undefined' && localStorage.getItem('writo_selected_model');
+      const hasCachedModels = cachedModelIds.length > 0;
+      if (!hasSavedChoice && !hasCachedModels && !userManuallySelectedModelRef.current && status === 'unloaded') {
         setModelId(recommendation.modelId);
       }
     } catch {
@@ -94,7 +122,7 @@ export function useWebLLM() {
         isTesting: false,
       });
     }
-  }, [status]);
+  }, [status, cachedModelIds.length]);
 
   // Check WebGPU, cached models & Network on mount
   useEffect(() => {
@@ -158,10 +186,17 @@ export function useWebLLM() {
     }
 
     try {
+      const isAlreadyCached = await hasModelInCache(idToLoad).catch(() => false);
+
       setDownloadingModelId(idToLoad);
-      setStatus('downloading');
+      setStatus(isAlreadyCached ? 'loading' : 'downloading');
       setErrorMessage(null);
-      setProgress({ progress: 0.05, text: 'Initializing WebGPU pipeline and checking cache...' });
+      setProgress({
+        progress: 0.05,
+        text: isAlreadyCached
+          ? '⚡ Reading model weights from offline disk storage...'
+          : 'Connecting to model repository and downloading weights...',
+      });
 
       const engine = await CreateMLCEngine(idToLoad, {
         initProgressCallback: (report: InitProgressReport) => {
@@ -170,13 +205,18 @@ export function useWebLLM() {
             return;
           }
 
+          let displayText = report.text;
+          if (isAlreadyCached && displayText.includes('Fetching param cache')) {
+            displayText = displayText.replace(/Fetching param cache/i, '⚡ Loading cached weights');
+          }
+
           setProgress({
             progress: report.progress,
-            text: report.text,
+            text: displayText,
             timeElapsed: report.timeElapsed,
           });
           if (report.progress < 1) {
-            setStatus(report.text.includes('Loading model') ? 'loading' : 'downloading');
+            setStatus(isAlreadyCached || report.text.includes('Loading model') ? 'loading' : 'downloading');
           }
         },
       });
@@ -206,9 +246,10 @@ export function useWebLLM() {
       setStatus('ready');
       setProgress({ progress: 1, text: 'Power stage activated and ready.' });
 
-      // Mark model as cached
+      // Mark model as cached and save selected model permanently
       try {
         localStorage.setItem(`writo_cached_${idToLoad}`, 'true');
+        localStorage.setItem('writo_selected_model', idToLoad);
       } catch {}
       setCachedModelIds((prev) => (prev.includes(idToLoad) ? prev : [...prev, idToLoad]));
     } catch (err: unknown) {
@@ -459,6 +500,10 @@ export function useWebLLM() {
    */
   const selectModel = useCallback(async (newModelId: string) => {
     userManuallySelectedModelRef.current = true;
+    try {
+      localStorage.setItem('writo_selected_model', newModelId);
+      localStorage.setItem('writo_user_manually_selected', 'true');
+    } catch {}
 
     // If already active on this exact model, nothing to do
     if (newModelId === activeEngineModelIdRef.current && status === 'ready') {

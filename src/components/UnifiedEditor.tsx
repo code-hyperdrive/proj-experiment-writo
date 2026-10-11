@@ -602,7 +602,9 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
               <div className="flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-500" />
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {status === 'downloading' ? `Preparing ${currentModel.name} Power` : `Activating ${currentModel.name} Power`}
+                  {status === 'downloading'
+                    ? `Downloading ${currentModel.name} Weights (One-time download)`
+                    : `Loading ${currentModel.name} from Offline Disk Cache`}
                 </span>
                 <span className="text-slate-500 dark:text-slate-400">
                   ({currentModel.family} • ~{currentModel.sizeMB} MB)
