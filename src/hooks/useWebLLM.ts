@@ -6,9 +6,37 @@ import { DEFAULT_MODEL_ID, AVAILABLE_MODELS, selectOptimalModelForSpeed } from '
 import { checkWebGPUSupport, WebGPUCheckResult } from '../utils/webgpu';
 import { detectNetworkSpeed } from '../utils/networkSpeed';
 
+// Helper to find the highest capability/size model among downloaded models
+function getHighestDownloadedModel(cachedIds: string[]): string | null {
+  if (!cachedIds || cachedIds.length === 0) return null;
+  const downloaded = AVAILABLE_MODELS.filter((m) => cachedIds.includes(m.id));
+  if (downloaded.length === 0) return null;
+  downloaded.sort((a, b) => b.sizeMB - a.sizeMB);
+  return downloaded[0].id;
+}
+
 export function useWebLLM() {
+  // Track cached models
+  const [cachedModelIds, setCachedModelIds] = useState<string[]>(() => {
+    try {
+      return AVAILABLE_MODELS.filter((m) => localStorage.getItem(`writo_cached_${m.id}`) === 'true').map((m) => m.id);
+    } catch {
+      return [];
+    }
+  });
+
+  // Default model: highest downloaded model if any are cached, otherwise saved preference, otherwise DEFAULT_MODEL_ID
   const [modelId, setModelId] = useState<string>(() => {
     try {
+      const initialCached = AVAILABLE_MODELS.filter(
+        (m) => localStorage.getItem(`writo_cached_${m.id}`) === 'true'
+      ).map((m) => m.id);
+      
+      const highestDownloaded = getHighestDownloadedModel(initialCached);
+      if (highestDownloaded) {
+        return highestDownloaded;
+      }
+      
       const saved = localStorage.getItem('writo_selected_model');
       if (saved && AVAILABLE_MODELS.some((m) => m.id === saved)) {
         return saved;
@@ -16,6 +44,7 @@ export function useWebLLM() {
     } catch {}
     return DEFAULT_MODEL_ID;
   });
+
   const [status, setStatus] = useState<EngineStatus>('unloaded');
   const [progress, setProgress] = useState<LoadingProgress>({ progress: 0, text: '' });
   const [gpuInfo, setGpuInfo] = useState<WebGPUCheckResult | null>(null);
@@ -29,15 +58,6 @@ export function useWebLLM() {
     tier: 'fast',
     saveData: false,
     isTesting: true,
-  });
-
-  // Track cached models and currently active vs downloading model
-  const [cachedModelIds, setCachedModelIds] = useState<string[]>(() => {
-    try {
-      return AVAILABLE_MODELS.filter((m) => localStorage.getItem(`writo_cached_${m.id}`) === 'true').map((m) => m.id);
-    } catch {
-      return [];
-    }
   });
 
   const [downloadingModelId, setDownloadingModelId] = useState<string | null>(null);
@@ -74,16 +94,24 @@ export function useWebLLM() {
     }
     setCachedModelIds(cached);
 
-    // If current model is not cached, but user already has an offline cached model and hasn't manually set preference, pick the cached one!
-    try {
-      const savedChoice = localStorage.getItem('writo_selected_model');
-      if (!savedChoice && cached.length > 0 && !cached.includes(modelId)) {
-        setModelId(cached[0]);
+    // Keep default model as the HIGHEST downloaded model
+    if (cached.length > 0) {
+      const highestDownloaded = getHighestDownloadedModel(cached);
+      if (highestDownloaded) {
+        const userExplicitlyPicked = localStorage.getItem('writo_user_manually_selected') === 'true';
+        const savedChoice = localStorage.getItem('writo_selected_model');
+        // If user hasn't explicitly chosen a different downloaded model, default to the highest downloaded
+        if (!userExplicitlyPicked || !savedChoice || !cached.includes(savedChoice)) {
+          setModelId(highestDownloaded);
+          try {
+            localStorage.setItem('writo_selected_model', highestDownloaded);
+          } catch {}
+        }
       }
-    } catch {}
+    }
 
     return cached;
-  }, [modelId]);
+  }, []);
 
   // Request browser storage persistence so model weights are never evicted
   useEffect(() => {
@@ -92,8 +120,16 @@ export function useWebLLM() {
     }
   }, []);
 
-  // Detect Network Speed (advisory only - never overrides existing cached or selected models)
-  const runSpeedCheck = useCallback(async () => {
+  // Detect Network Speed: ONLY used when NO model is downloaded to pick the initial model to download
+  const runSpeedCheck = useCallback(async (currentCachedCount?: number) => {
+    const count = currentCachedCount !== undefined ? currentCachedCount : cachedModelIds.length;
+    
+    // IF ANY MODEL IS DOWNLOADED: DO NOT run speed logic to pick model!
+    if (count > 0) {
+      setNetworkInfo((prev) => ({ ...prev, isTesting: false }));
+      return;
+    }
+
     setNetworkInfo((prev) => ({ ...prev, isTesting: true }));
     try {
       const speedResult = await detectNetworkSpeed();
@@ -107,11 +143,12 @@ export function useWebLLM() {
         isTesting: false,
       });
 
-      // ONLY auto-switch model on very first visit if user has never selected a model and has no cached models
-      const hasSavedChoice = typeof window !== 'undefined' && localStorage.getItem('writo_selected_model');
-      const hasCachedModels = cachedModelIds.length > 0;
-      if (!hasSavedChoice && !hasCachedModels && !userManuallySelectedModelRef.current && status === 'unloaded') {
+      // Since NO model is downloaded yet, pick the recommended model based on speed to start download
+      if (status === 'unloaded') {
         setModelId(recommendation.modelId);
+        try {
+          localStorage.setItem('writo_selected_model', recommendation.modelId);
+        } catch {}
       }
     } catch {
       setNetworkInfo({
@@ -137,8 +174,15 @@ export function useWebLLM() {
       }
     });
 
-    refreshCachedModels();
-    runSpeedCheck();
+    refreshCachedModels().then((cached) => {
+      if (!mounted) return;
+      // ONLY run speed logic to pick a model if NO model is downloaded yet!
+      if (cached.length === 0) {
+        runSpeedCheck(0);
+      } else {
+        setNetworkInfo((prev) => ({ ...prev, isTesting: false }));
+      }
+    });
 
     return () => {
       mounted = false;

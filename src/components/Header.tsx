@@ -154,20 +154,37 @@ export const Header: React.FC<HeaderProps> = ({
                 value={modelId}
                 disabled={status === 'generating'}
                 onChange={(e) => onSelectModel(e.target.value)}
-                className="bg-transparent border-none outline-none cursor-pointer font-semibold pr-4 text-slate-800 dark:text-slate-200 disabled:opacity-50 w-full truncate"
+                className="bg-transparent border-none outline-none cursor-pointer font-semibold pr-3 text-slate-800 dark:text-slate-200 disabled:opacity-50 w-full truncate"
               >
                 {AVAILABLE_MODELS.map((m) => {
                   const isCached = cachedModelIds.includes(m.id);
                   const isDownloading = downloadingModelId === m.id;
-                  const tag = isDownloading ? '⏳ Downloading' : isCached ? '⚡ Ready' : '↓ Needs Download';
+                  const tag = isDownloading ? '⏳ Downloading...' : isCached ? '✓ Downloaded (Ready)' : '↓ Needs Download';
                   return (
                     <option key={m.id} value={m.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium">
-                      {m.name} ({m.family}) • {tag} {m.recommended ? '★' : ''}
+                      {isCached ? '✓ [Downloaded] ' : '↓ '}{m.name} ({m.family} • {m.sizeMB}MB) — {tag} {m.recommended ? '★' : ''}
                     </option>
                   );
                 })}
               </select>
-              <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none -ml-3 shrink-0" />
+              <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none -ml-2 shrink-0" />
+
+              {/* Status pill for the currently selected model */}
+              {cachedModelIds.includes(modelId) ? (
+                <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center gap-1" title="Model weights are downloaded and ready on your device">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Downloaded
+                </span>
+              ) : downloadingModelId === modelId ? (
+                <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                  Downloading
+                </span>
+              ) : (
+                <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-200/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-600/40" title="Model weights will download on first use">
+                  ↓ Download
+                </span>
+              )}
             </div>
           </div>
 
