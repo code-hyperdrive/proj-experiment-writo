@@ -16,12 +16,21 @@ import {
   Zap,
   FileDown,
   History,
-  BookmarkPlus
+  BookmarkPlus,
+  MoveVertical
 } from 'lucide-react';
 import { TextMetrics, EngineStatus, LoadingProgress, NetworkInfo, ActionType, GenerationStats } from '../types';
 import { ActionToolbar } from './ActionToolbar';
 import { DiffViewer } from './DiffViewer';
 import { AVAILABLE_MODELS } from '../constants/models';
+
+type EditorSize = 'compact' | 'medium' | 'large';
+
+const HEIGHT_CONFIG: Record<EditorSize, { minHeightClass: string; defaultPx: number }> = {
+  compact: { minHeightClass: 'min-h-[140px] sm:min-h-[180px]', defaultPx: 140 },
+  medium: { minHeightClass: 'min-h-[250px] sm:min-h-[360px]', defaultPx: 250 },
+  large: { minHeightClass: 'min-h-[380px] sm:min-h-[500px]', defaultPx: 380 },
+};
 
 interface UnifiedEditorProps {
   text: string;
@@ -84,6 +93,45 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'edit' | 'diff'>('edit');
+  const [editorSize, setEditorSize] = useState<EditorSize>(() => {
+    try {
+      const saved = localStorage.getItem('writo_editor_size');
+      if (saved === 'compact' || saved === 'medium' || saved === 'large') {
+        return saved;
+      }
+      if (typeof window !== 'undefined' && window.innerWidth < 640) {
+        return 'compact';
+      }
+    } catch {}
+    return 'medium';
+  });
+  const [customHeight, setCustomHeight] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem('writo_editor_custom_height');
+      return saved ? parseInt(saved, 10) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleSetSize = (newSize: EditorSize) => {
+    setEditorSize(newSize);
+    setCustomHeight(null);
+    try {
+      localStorage.setItem('writo_editor_size', newSize);
+      localStorage.removeItem('writo_editor_custom_height');
+    } catch {}
+  };
+
+  const handleStepHeight = (delta: number) => {
+    const current = customHeight ?? HEIGHT_CONFIG[editorSize].defaultPx;
+    const next = Math.max(110, Math.min(800, current + delta));
+    setCustomHeight(next);
+    try {
+      localStorage.setItem('writo_editor_custom_height', next.toString());
+    } catch {}
+  };
+
   const [selection, setSelection] = useState<{ start: number; end: number; text: string; words: number }>({
     start: 0,
     end: 0,
@@ -314,8 +362,86 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
 
       </div>
 
+      {/* Writing Area Size Customizer */}
+      <div className="px-3 sm:px-5 py-1.5 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <MoveVertical className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+          <span className="font-medium text-slate-700 dark:text-slate-300 text-[11px] sm:text-xs">
+            Writing Area:
+          </span>
+          <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-200/70 dark:bg-slate-800 text-[11px] font-medium">
+            <button
+              type="button"
+              onClick={() => handleSetSize('compact')}
+              className={`px-2 py-0.5 rounded-md transition-all font-semibold ${
+                !customHeight && editorSize === 'compact'
+                  ? 'bg-brand-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+              title="Compact size (fits screen with actions visible)"
+            >
+              Compact
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetSize('medium')}
+              className={`px-2 py-0.5 rounded-md transition-all font-semibold ${
+                !customHeight && editorSize === 'medium'
+                  ? 'bg-brand-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+              title="Standard size"
+            >
+              Medium
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetSize('large')}
+              className={`px-2 py-0.5 rounded-md transition-all font-semibold ${
+                !customHeight && editorSize === 'large'
+                  ? 'bg-brand-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+              title="Expanded large size"
+            >
+              Large
+            </button>
+          </div>
+        </div>
+
+        {/* Height fine-tune adjustment buttons */}
+        <div className="flex items-center gap-1 text-[11px] text-slate-400">
+          <span className="hidden sm:inline font-mono">
+            {customHeight ? `${customHeight}px` : editorSize === 'compact' ? 'Fit Screen' : editorSize}
+          </span>
+          <div className="inline-flex items-center p-0.5 rounded-md bg-slate-200/50 dark:bg-slate-800">
+            <button
+              type="button"
+              onClick={() => handleStepHeight(-30)}
+              className="px-1.5 py-0.5 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors"
+              title="Decrease writing area height"
+              aria-label="Decrease editor height"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStepHeight(30)}
+              className="px-1.5 py-0.5 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors"
+              title="Increase writing area height"
+              aria-label="Increase editor height"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Single Text Box or Diff Comparison View */}
-      <div className="relative min-h-[360px] sm:min-h-[440px]">
+      <div 
+        style={customHeight ? { height: `${customHeight}px`, minHeight: `${customHeight}px` } : undefined}
+        className={`relative transition-[min-height] duration-200 ${customHeight ? '' : HEIGHT_CONFIG[editorSize].minHeightClass}`}
+      >
         {/* Top edge animated gradient shimmer when generating */}
         {isGenerating && (
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-brand-500 via-indigo-500 to-purple-500 animate-pulse z-20" />
@@ -347,10 +473,18 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
             onMouseUp={updateSelection}
             readOnly={isGenerating}
             placeholder="Type or paste your text here... Highlight any phrase to rewrite specific sentences."
-            className="w-full h-full min-h-[360px] sm:min-h-[440px] p-5 sm:p-6 resize-y bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none text-base leading-relaxed font-sans"
+            style={customHeight ? { height: `${customHeight}px`, minHeight: `${customHeight}px` } : undefined}
+            className={`w-full h-full p-3.5 sm:p-6 resize-y bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none text-sm sm:text-base leading-relaxed font-sans transition-[min-height] duration-200 ${
+              customHeight ? '' : HEIGHT_CONFIG[editorSize].minHeightClass
+            }`}
           />
         ) : (
-          <div className="p-6 min-h-[360px] sm:min-h-[440px] overflow-y-auto space-y-4">
+          <div 
+            style={customHeight ? { height: `${customHeight}px`, minHeight: `${customHeight}px` } : undefined}
+            className={`p-4 sm:p-6 overflow-y-auto space-y-4 transition-[min-height] duration-200 ${
+              customHeight ? '' : HEIGHT_CONFIG[editorSize].minHeightClass
+            }`}
+          >
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-xs">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
@@ -386,7 +520,7 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
       </div>
 
       {/* Footer Metrics & Status Bar */}
-      <div className="px-5 py-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+      <div className="px-3 sm:px-5 py-2 sm:py-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-4 flex-wrap">
           <span className="flex items-center gap-1.5">
             <AlignLeft className="w-3.5 h-3.5 text-slate-400" />
@@ -447,7 +581,7 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
       </div>
 
       {/* AI Assistant Section (Action Toolbar & Status) */}
-      <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 p-4 transition-all space-y-3">
+      <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 p-2.5 sm:p-4 transition-all space-y-2 sm:space-y-3">
         
         {/* WebGPU Fallback Demo Notice if not supported */}
         {status === 'fallback' && !isSimulationMode && (
