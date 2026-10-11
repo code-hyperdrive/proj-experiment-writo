@@ -17,12 +17,15 @@ import {
   FileDown,
   History,
   BookmarkPlus,
-  MoveVertical
+  MoveVertical,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import { TextMetrics, EngineStatus, LoadingProgress, NetworkInfo, ActionType, GenerationStats } from '../types';
 import { ActionToolbar } from './ActionToolbar';
 import { DiffViewer } from './DiffViewer';
 import { AVAILABLE_MODELS } from '../constants/models';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 type EditorSize = 'compact' | 'medium' | 'large';
 
@@ -140,6 +143,61 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
   });
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Synchronize current text for speech dictation insertion
+  const textRef = useRef(text);
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
+
+  const handleFinalSpeechTranscript = useCallback((speechChunk: string) => {
+    const chunk = speechChunk.trim();
+    if (!chunk) return;
+
+    const current = textRef.current;
+    const textarea = textareaRef.current;
+
+    let newText = '';
+    // If the textarea was actively focused, insert at cursor position
+    if (textarea && document.activeElement === textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const before = current.substring(0, start);
+      const after = current.substring(end);
+      const prefix = before && !before.endsWith(' ') && !before.endsWith('\n') ? ' ' : '';
+      const postfix = after && !after.startsWith(' ') && !after.startsWith('\n') ? ' ' : '';
+      newText = before + prefix + chunk + postfix + after;
+
+      onChange(newText);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const nextCursor = start + prefix.length + chunk.length;
+          textareaRef.current.selectionStart = nextCursor;
+          textareaRef.current.selectionEnd = nextCursor;
+        }
+      }, 0);
+    } else {
+      // Append to draft
+      if (!current.trim()) {
+        newText = chunk;
+      } else {
+        const needsSpace = !current.endsWith(' ') && !current.endsWith('\n');
+        newText = current + (needsSpace ? ' ' : '') + chunk;
+      }
+      onChange(newText);
+    }
+  }, [onChange]);
+
+  const {
+    isSupported: isSpeechSupported,
+    isListening,
+    interimTranscript,
+    error: speechError,
+    toggleListening,
+    stopListening,
+  } = useSpeechRecognition({
+    onFinalTranscript: handleFinalSpeechTranscript,
+  });
 
   const isGenerating = status === 'generating';
   const isBusy = status === 'downloading' || status === 'loading';
@@ -280,6 +338,36 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-300 dark:bg-slate-700 font-mono font-bold">
                 {historyCount}
               </span>
+            )}
+          </button>
+
+          {/* Speech Dictation / Speak Button */}
+          <button
+            type="button"
+            onClick={toggleListening}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border cursor-pointer ${
+              isListening
+                ? 'bg-rose-500 text-white border-rose-600 shadow-sm animate-pulse ring-2 ring-rose-500/30 font-semibold'
+                : 'bg-slate-200/60 dark:bg-slate-800 hover:bg-brand-500/10 hover:text-brand-600 dark:hover:bg-brand-500/20 text-slate-700 dark:text-slate-300 border-transparent hover:border-brand-500/20'
+            }`}
+            title={
+              !isSpeechSupported
+                ? 'Speech recognition is not supported in this browser (Chrome, Edge, or Safari recommended)'
+                : isListening
+                ? 'Click to stop speech dictation'
+                : 'Dictate / Add text by speaking (Speech to Text)'
+            }
+          >
+            {isListening ? (
+              <>
+                <MicOff className="w-3.5 h-3.5" />
+                <span>Stop</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-3.5 h-3.5 text-brand-500 dark:text-brand-400" />
+                <span>Dictate</span>
+              </>
             )}
           </button>
         </div>
@@ -463,6 +551,45 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
           </div>
         )}
 
+        {/* Active Speech Dictation Banner */}
+        {isListening && (
+          <div className="mx-3.5 sm:mx-6 mt-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-brand-500/10 border border-rose-500/30 flex items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in slide-in-from-top-1 z-20">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+              </span>
+              <span className="font-semibold text-rose-700 dark:text-rose-300 shrink-0">
+                Dictating:
+              </span>
+              <span className="truncate text-slate-800 dark:text-slate-100 font-medium italic">
+                {interimTranscript ? `"${interimTranscript}"` : 'Listening for your voice... speak now to add text'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={stopListening}
+              className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] transition-colors shadow-xs shrink-0 cursor-pointer"
+            >
+              Done / Stop
+            </button>
+          </div>
+        )}
+
+        {/* Speech Dictation Notice / Error */}
+        {speechError && (
+          <div className="mx-3.5 sm:mx-6 mt-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between gap-2 z-20">
+            <span>{speechError}</span>
+            <button
+              type="button"
+              onClick={stopListening}
+              className="text-[11px] font-semibold underline hover:text-amber-900 dark:hover:text-amber-100 shrink-0 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {viewMode === 'edit' ? (
           <textarea
             ref={textareaRef}
@@ -472,7 +599,7 @@ export const UnifiedEditor: React.FC<UnifiedEditorProps> = ({
             onKeyUp={updateSelection}
             onMouseUp={updateSelection}
             readOnly={isGenerating}
-            placeholder="Type or paste your text here... Highlight any phrase to rewrite specific sentences."
+            placeholder="Type, paste, or speak (use Dictate) your text here... Highlight any phrase to rewrite specific sentences."
             style={customHeight ? { height: `${customHeight}px`, minHeight: `${customHeight}px` } : undefined}
             className={`w-full h-full p-3.5 sm:p-6 resize-y bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none text-sm sm:text-base leading-relaxed font-sans transition-[min-height] duration-200 ${
               customHeight ? '' : HEIGHT_CONFIG[editorSize].minHeightClass
