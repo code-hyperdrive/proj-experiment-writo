@@ -149,25 +149,27 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-700 dark:text-slate-300 w-full sm:w-auto shadow-xs">
               <Sparkles className="w-3.5 h-3.5 text-brand-500 shrink-0" />
               <span className="font-medium text-slate-400 shrink-0">Power:</span>
-              <select
-                aria-label="Select Writing Power Stage"
-                value={modelId}
-                disabled={status === 'generating'}
-                onChange={(e) => onSelectModel(e.target.value)}
-                className="bg-transparent border-none outline-none cursor-pointer font-semibold pr-3 text-slate-800 dark:text-slate-200 disabled:opacity-50 w-full truncate"
-              >
-                {AVAILABLE_MODELS.map((m) => {
-                  const isCached = cachedModelIds.includes(m.id);
-                  const isDownloading = downloadingModelId === m.id;
-                  const tag = isDownloading ? '⏳ Downloading...' : isCached ? '✓ Downloaded (Ready)' : '↓ Needs Download';
-                  return (
-                    <option key={m.id} value={m.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium">
-                      {isCached ? '✓ [Downloaded] ' : '↓ '}{m.name} ({m.family} • {m.sizeMB}MB) — {tag} {m.recommended ? '★' : ''}
-                    </option>
-                  );
-                })}
-              </select>
-              <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none -ml-2 shrink-0" />
+              <div className="relative flex items-center flex-1 min-w-0">
+                <select
+                  aria-label="Select Writing Power Stage"
+                  value={modelId}
+                  disabled={status === 'generating'}
+                  onChange={(e) => onSelectModel(e.target.value)}
+                  className="appearance-none bg-transparent border-none outline-none cursor-pointer font-semibold pr-5 text-slate-800 dark:text-slate-200 disabled:opacity-50 w-full truncate"
+                >
+                  {AVAILABLE_MODELS.map((m) => {
+                    const isCached = cachedModelIds.includes(m.id);
+                    const isDownloading = downloadingModelId === m.id;
+                    const tag = isDownloading ? '⏳ Downloading...' : isCached ? '✓ Downloaded' : 'Not downloaded';
+                    return (
+                      <option key={m.id} value={m.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium">
+                        {isCached ? '✓ [Downloaded] ' : ''}{m.name} ({m.family} • {m.sizeMB}MB) — {tag} {m.recommended ? '★' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-0.5 shrink-0" />
+              </div>
 
               {/* Status pill for the currently selected model */}
               {cachedModelIds.includes(modelId) ? (
@@ -182,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               ) : (
                 <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-200/70 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-600/40" title="Model weights will download on first use">
-                  ↓ Download
+                  Not downloaded
                 </span>
               )}
             </div>
