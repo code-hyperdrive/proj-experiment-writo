@@ -1,0 +1,116 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "writo",
+  "title": "Writo - AI Writing Assistant",
+  "description": "Improve, polish, fix grammar, and transform drafts in Slack and macOS apps.",
+  "icon": "icon.png",
+  "author": "rasingh",
+  "categories": [
+    "Productivity",
+    "Writing"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "quick-improve",
+      "title": "Quick Improve Selection",
+      "subtitle": "Writo",
+      "description": "Instantly polishes selected text in Slack or any app and replaces it in-place.",
+      "mode": "no-view"
+    },
+    {
+      "name": "rewrite-palette",
+      "title": "Writo: Polish & Rewrite",
+      "subtitle": "Writo",
+      "description": "Pick a tone (Professional, Concise, Grammar, Simplify) and preview or replace selected text.",
+      "mode": "view"
+    },
+    {
+      "name": "scratchpad",
+      "title": "Writo: Scratchpad",
+      "subtitle": "Writo",
+      "description": "Open a quick draft scratchpad to polish messages before pasting into Slack.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "provider",
+      "type": "dropdown",
+      "required": false,
+      "title": "AI Backend",
+      "description": "Choose between local Ollama (free/offline) or cloud API",
+      "default": "ollama",
+      "data": [
+        {
+          "title": "Ollama (Local & Free)",
+          "value": "ollama"
+        },
+        {
+          "title": "OpenAI Compatible API",
+          "value": "openai"
+        },
+        {
+          "title": "Google Gemini API",
+          "value": "gemini"
+        }
+      ]
+    },
+    {
+      "name": "ollamaHost",
+      "type": "textfield",
+      "required": false,
+      "title": "Ollama Host URL",
+      "description": "URL of your local Ollama server",
+      "default": "http://localhost:11434"
+    },
+    {
+      "name": "ollamaModel",
+      "type": "textfield",
+      "required": false,
+      "title": "Ollama Model",
+      "description": "Model tag in Ollama (e.g. llama3.1:8b, llama3.2, mistral)",
+      "default": "llama3.1:8b"
+    },
+    {
+      "name": "apiKey",
+      "type": "password",
+      "required": false,
+      "title": "API Key",
+      "description": "API Key if using OpenAI or Gemini"
+    },
+    {
+      "name": "apiEndpoint",
+      "type": "textfield",
+      "required": false,
+      "title": "Custom API Endpoint",
+      "description": "Base URL for OpenAI-compatible endpoint (optional)",
+      "default": "https://api.openai.com/v1"
+    },
+    {
+      "name": "cloudModel",
+      "type": "textfield",
+      "required": false,
+      "title": "Cloud Model Name",
+      "description": "e.g. gpt-4o-mini, gemini-1.5-flash",
+      "default": "gpt-4o-mini"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.88.0",
+    "@raycast/utils": "^1.18.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "20.10.0",
+    "@types/react": "18.3.18",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "lint": "ray lint"
+  }
+}

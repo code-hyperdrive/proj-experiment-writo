@@ -101,38 +101,47 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Folder Structure
+## Repository & Workspace Structure
 
 ```
-├── index.html                   # HTML entry point with fonts & dark theme setup
-├── package.json                 # Dependencies & build scripts
-├── postcss.config.js            # PostCSS configuration for Tailwind
-├── tailwind.config.js           # Tailwind CSS configuration with brand colors
-├── tsconfig.json                # TypeScript compiler configuration
-├── tsconfig.node.json           # TypeScript node configuration
-├── vite.config.ts               # Vite configuration with COOP/COEP headers
-└── src
-    ├── main.tsx                 # React application mounting
-    ├── App.tsx                  # Primary single-page layout & state orchestrator
-    ├── index.css                # Tailwind directives & glassmorphic utilities
-    ├── types
-    │   └── index.ts             # TypeScript definitions for actions & models
-    ├── constants
-    │   ├── models.ts            # Local LLM registry (Qwen, TinyLlama, Phi-3)
-    │   └── prompts.ts           # System prompts, action templates & sample drafts
-    ├── utils
-    │   ├── diff.ts              # Word-level LCS diff algorithm
-    │   ├── textStats.ts         # Character, word, sentence & reading time calculator
-    │   └── webgpu.ts            # WebGPU adapter detector & diagnostics
-    ├── hooks
-    │   ├── useDarkMode.ts       # Theme manager with localStorage persistence
-    │   └── useWebLLM.ts         # WebLLM engine lifecycle, streaming & caching hook
-    └── components
-        ├── Header.tsx           # Navigation header, model selector & theme toggle
-        ├── ModelStatusBanner.tsx# Progress bar, download status & WebGPU alerts
-        ├── TextEditor.tsx       # Original text input with live statistics
-        ├── ActionToolbar.tsx    # 5 action buttons with loading states & shortcuts
-        ├── ResultViewer.tsx     # Output container with copy, replace & TXT download
-        ├── DiffViewer.tsx       # Visual word diff renderer
-        └── Footer.tsx           # Privacy badge & architecture specs
+.
+├── package.json                         # Root workspace scripts (dev, build:all, etc.)
+├── proj-experiment-writo-web/           # Standalone Web App (React + Vite + WebGPU)
+│   ├── src/
+│   │   ├── components/                  # UnifiedEditor, Header, ActionToolbar, DiffViewer, HistoryModal
+│   │   ├── hooks/                       # useWebLLM, useDarkMode, useSpeechRecognition
+│   │   ├── constants/                   # Model registry & prompt configurations
+│   │   └── utils/                       # Diff, metrics & WebGPU hardware checks
+│   ├── package.json
+│   └── vite.config.ts
+├── proj-experiment-writo-extension/     # Chrome Extension (Manifest V3 + WebGPU Offscreen)
+│   ├── src/
+│   │   ├── background/                  # Service worker lifecycle & pill injection
+│   │   ├── offscreen/                   # WebGPU WebLLM generation engine & chunk streaming
+│   │   ├── content/                     # Floating selection pill & in-page text replacement
+│   │   ├── popup/                       # Model download manager & status UI
+│   │   └── sidepanel/                   # Dedicated sidepanel rewrite workspace
+│   ├── manifest.json
+│   └── package.json
+└── proj-experiment-writo-raycast/       # macOS Raycast Companion Extension
+    ├── src/
+    └── package.json
+```
+
+## Quick Start Commands (from root)
+
+```bash
+# Run Web Application in dev mode
+npm run dev
+# or
+npm run dev:web
+
+# Build Web Application
+npm run build:web
+
+# Build Chrome Extension
+npm run build:extension
+
+# Build all applications
+npm run build:all
 ```
