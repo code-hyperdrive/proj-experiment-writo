@@ -11,6 +11,7 @@
     "build:web": "npm --prefix proj-experiment-writo-web run build",
     "build:extension": "npm --prefix proj-experiment-writo-extension run build",
     "build:all": "npm --prefix proj-experiment-writo-web run build && npm --prefix proj-experiment-writo-extension run build",
+    "deploy": "npm run build:all && wrangler pages deploy proj-experiment-writo-web/dist --project-name writo --branch main",
     "preview": "npm --prefix proj-experiment-writo-web run preview"
   }
 }
